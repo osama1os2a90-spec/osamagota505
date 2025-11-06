@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>بنك الأسئلة الكيميائية — اختبار تفاعلي</title>
+<style>
+  :root{
+    --panel:#ffffffee;
+    --ink:#0d2430;
+    --muted:#647587;
+    --accent:#02a7a7;
+    --accent2:#0a6f56;
+    --cool1:#e9f8ff; --cool2:#e8fff7; --coolBorder:#cfeef6; --coolText:#0b6b88;
+  }
+  /* ===== إطار عام ===== */
+  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Tahoma,Arial,sans-serif;color:var(--ink);overflow-x:hidden}
+  /* ===== الخلفية الكيميائية (ذرات ومدارات تتحرك) ===== */
+  .bg{position:fixed;inset:0;background:radial-gradient(70% 50% at 50% -10%,#dff6ff 0%,#f3fffc 55%,#faffff 100%);z-index:0;overflow:hidden}
+  .atom{position:absolute;opacity:.85;filter:drop-shadow(0 6px 18px rgba(0,0,0,.10));animation:floatY linear infinite}
+  @keyframes floatY{from{transform:translateY(105vh)} to{transform:translateY(-15vh)}}
+  .spin{transform-origin:center;animation:spin linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ===== الواجهة ===== */
+  .wrap{position:relative;z-index:1;max-width:1100px;margin:22px auto;padding:12px}
+  .card{max-width:1000px;margin:28px auto;padding:22px 20px;border-radius:16px;background:var(--panel);box-shadow:0 12px 34px rgba(0,0,0,.10);backdrop-filter:saturate(1.05) blur(6px)}
+  h1,h2,h3{margin:0 0 12px}
+  .muted{color:var(--muted)}
+  .row{display:flex;flex-wrap:wrap;gap:12px}
+  .col{flex:1 1 280px}
+  input[type="text"],select,textarea{width:100%;padding:12px 14px;border:1px solid #e3edf3;border-radius:12px;font-size:16px;background:#fff}
+  textarea{min-height:110px;resize:vertical}
+  button{border:0;border-radius:12px;padding:12px 16px;font-size:16px;cursor:pointer}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-secondary{background:#e9f7f8;color:#066}
+  .btn-ghost{background:transparent;border:1px solid #cfe7ea;color:#055}
+  .progress{height:10px;background:#eaf2f7;border-radius:99px;overflow:hidden}
+  .bar{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s}
+  .q-num{display:inline-block;min-width:40px;height:40px;border-radius:999px;background:#ecfeff;color:#066;line-height:40px;text-align:center;font-weight:700}
+  .choices{display:grid;gap:10px;margin-top:10px}
+  .choice{padding:12px;border:1px solid #dceaf0;border-radius:12px;background:#fff;cursor:pointer}
+  .choice:hover{border-color:#b6dce1}
+  .choice.selected{outline:2px solid #9ce4eb}
+  .tag{display:inline-block;background:#fff8e6;border:1px solid #ffe2a8;color:#7a4b00;padding:.15rem .5rem;border-radius:999px;font-size:12px;margin-inline-start:6px}
+  .footer{margin-top:16px;display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+  .timer{font-variant-numeric:tabular-nums;font-weight:700}
+  .pill{display:inline-block;padding:.25rem .65rem;border-radius:999px;background:#eef7ff;border:1px solid #cfe5ff;color:#055;font-size:12px}
+  .hidden{display:none !important}
+  .toast{position:fixed;inset-inline:0;top:12px;display:flex;justify-content:center;z-index:99}
+  .toast>div{max-width:900px;background:#fff;border:1px solid #e7eef3;padding:12px 14px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.08)}
+  .no-select{user-select:none;-webkit-user-select:none}
+  /* الألغاز داخل السؤال الخامس والعاشر... */
+  .riddle{margin-top:12px;padding:12px;border:1px dashed #bfe2ff;background:#f5fbff;border-radius:12px}
+  .riddle h4{margin:0 0 8px;color:#0a4f66}
+  .riddle .row{gap:8px}
+
+  /* المدرسون — لون بارد */
+  .cool-links{margin-top:14px;padding:14px;border-radius:14px;background:linear-gradient(180deg,var(--cool1),var(--cool2));border:1px solid var(--coolBorder)}
+  .cool-links h3{margin:0 0 10px;color:#0a5973}
+  .cool-links ul{margin:0;padding:0;list-style:none}
+  .cool-links li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;background:#ffffffcc;border:1px solid #e4f3ff;margin-top:8px}
+  .cool-links .name{color:#084e63;font-weight:700}
+  .cool-links a{color:var(--coolText);text-decoration:none;font-weight:700}
+  .cool-links a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+  <!-- ===== الخلفية الكيميائية الفعلية ===== -->
+  <div class="bg" id="bg" aria-hidden="true"></div>
+
+  <div class="wrap">
+    <!-- ===== الصفحة الرئيسية ===== -->
+    <section id="start" class="card">
+      <h1>بنك الأسئلة الكيميائية</h1>
+      <p class="muted">
+        منصة تدريبية لقياس فهمك وتعزيز مراجعتك في كيمياء 1 (نظام المسارات).
+        تغطي الأسئلة: طبقة الأوزون وثقب الأوزون، اتفاقية/بروتوكول مونتريال، مركبات CFC وتأثيرها،
+        العوامل الجوية، والأشعة فوق البنفسجية وآثارها.
+      </p>
+      <ul class="muted" style="margin:0 0 10px 18px">
+        <li>الهدف: قياس الفهم وتحديد نقاط التحسين.</li>
+        <li>مدة الاختبار: <strong>55 دقيقة</strong> — عدد الأسئلة: <strong>50</strong>.</li>
+        <li>سؤال واحد في كل مرة • الرجوع للسابق مسموح • لا سكب للأمام • لا تُعرض صح/خطأ أثناء الحل.</li>
+      </ul>
+      <div class="row">
+        <div class="col">
+          <label>اسم الطالب</label>
+          <input id="studentName" type="text" placeholder="اكتب الاسم الثلاثي" autocomplete="off">
+        </div>
+        <div class="col">
+          <label>الشعبة</label>
+          <select id="section">
+            <option value="">اختر الشعبة</option>
+            <option>1</option><option>2</option><option>3</option><option>4</option>
+            <option>5</option><option>6</option><option>7</option>
+          </select>
+        </div>
+      </div>
+      <div class="footer">
+        <div class="muted">الخلفية: ذرات ومدارات وإلكترونات تتحرك • يمنع النسخ والطباعة أثناء الاختبار</div>
+        <button id="startBtn" class="btn-primary" type="button">ابدأ الاختبار</button>
+      </div>
+    </section>
+
+    <!-- ===== شاشة السؤال ===== -->
+    <section id="quiz" class="card hidden">
+      <div class="row" style="align-items:center;gap:16px">
+        <div class="q-num" id="qNum">1</div>
+        <div style="flex:1">
+          <div class="progress"><div id="bar" class="bar"></div></div>
+          <small class="muted"><span id="progressText">سؤال 1 من 50</span> • <span class="timer" id="timer">55:00</span></small>
+        </div>
+        <div><span id="topicTag" class="tag">موضوع</span></div>
+      </div>
+
+      <div id="qText" class="no-select" style="margin-top:12px;font-size:20px;line-height:1.7"></div>
+      <div id="choices" class="choices"></div>
+
+      <!-- الألغاز (تظهر فقط في الأسئلة 5×) -->
+      <div id="riddleBox" class="riddle hidden">
+        <h4>ألغاز مساعدة (أكمل الثلاث خانات لتتمكن من تأكيد هذا السؤال)</h4>
+        <div class="row">
+          <input id="r1" type="text" placeholder="لغز 1">
+          <input id="r2" type="text" placeholder="لغز 2">
+          <input id="r3" type="text" placeholder="لغز 3">
+        </div>
+        <small class="muted">تلميح: الألغاز تكمل بعضها (كلمات/رموز كيميائية).</small>
+      </div>
+
+      <div class="footer">
+        <div class="muted"></div>
+        <div style="display:flex;gap:8px">
+          <button id="prevBtn" class="btn-ghost" type="button">السابق</button>
+          <button id="confirmBtn" class="btn-primary" type="button" disabled>تأكيد الإجابة</button>
+          <button id="nextBtn" class="btn-secondary" type="button" disabled>التالي</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== شاشة النتيجة ===== -->
+    <section id="result" class="card hidden">
+      <h2>النتيجة</h2>
+      <p id="scoreLine" style="font-size:18px"></p>
+      <details open>
+        <summary>تقرير الأسئلة والإجابات</summary>
+        <div id="report" style="margin-top:10px"></div>
+      </details>
+
+      <div style="margin-top:16px">
+        <h3>ملاحظاتك على الاختبار</h3>
+        <textarea id="notes" placeholder="اكتب ملاحظاتك على الاختبار (ما كان سهل؟ ما يحتاج مراجعة؟)"></textarea>
+      </div>
+
+      <div style="margin-top:12px">
+        <h3>سؤالان مرتبطان بالهدف</h3>
+        <p class="muted">س1) كيف تؤثر مركبات CFC على تكوّن ثقب الأوزون؟ اذكر الآلية بإيجاز.</p>
+        <p class="muted">س2) ما خطتك لتحسين إجابتك في موضوع أخطأت فيه؟</p>
+      </div>
+
+      <hr/>
+      <div style="margin:8px 0 16px">
+        <strong>فريق الطلحة</strong><br/>
+        أسامه ال سليمان • راكان الحربي • عبد الإله الشمري • أسامه العدواني • متعب الوسمي • عبدالمحسن العتيبي • عبدالوهاب الشهري
+      </div>
+
+      <div class="cool-links">
+        <h3>مدرّسون على يوتيوب لشرح كيمياء 1 (أول ثانوي)</h3>
+        <ul>
+          <li><span class="name">قناة عين دروس (وزارة التعليم)</span><a href="https://www.youtube.com/@iEN_TV" target="_blank" rel="noopener">رابط اليوتيوب</a></li>
+          <li><span class="name">محمد زيادة — Ziada for Science</span><a href="https://www.youtube.com/@ziadaforscience" target="_blank" rel="noopener">رابط اليوتيوب</a></li>
+          <li><span class="name">أ. هدى الغوينم</span><a href="https://www.youtube.com/@HudaAlGhuwaim" target="_blank" rel="noopener">رابط اليوتيوب</a></li>
+          <li><span class="name">أحمد الحربي (كيمياء)</span><a href="https://www.youtube.com/@AhmadAlharbiEdu" target="_blank" rel="noopener">رابط اليوتيوب</a></li>
+          <li><span class="name">وليد أبو الخير التعليمية</span><a href="https://www.youtube.com/@waleedabualkhair" target="_blank" rel="noopener">رابط اليوتيوب</a></li>
+        </ul>
+      </div>
+
+      <div class="footer">
+        <button class="btn-ghost" onclick="location.reload()">إعادة المحاولة</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"><div id="toastMsg"></div></div>
+
+<script>
+/* ============ خلفية الذرات/المدارات — توليد فعلي يضمن الظهور ============ */
+(function buildAtoms(){
+  const bg = document.getElementById('bg');
+  // نصنع 8 ذرات متحركة بأحجام/سرعات مختلفة
+  for(let i=0;i<8;i++){
+    const w = 140 + Math.random()*120;
+    const left = Math.random()*92;
+    const topStart = Math.random()*90;
+    const dur = 22 + Math.random()*14;
+    const el = document.createElement('div');
+    el.className = 'atom';
+    el.style.left = left+'%';
+    el.style.top = topStart+'%';
+    el.style.animationDuration = dur+'s';
+    el.innerHTML = `
+      <svg width="${w}" height="${w}" viewBox="0 0 180 180" aria-hidden="true">
+        <defs>
+          <radialGradient id="nucl${i}" cx="50%" cy="50%">
+            <stop offset="0" stop-color="#9ae7ff"/><stop offset="1" stop-color="#eaffff"/>
+          </radialGradient>
+        </defs>
+        <circle cx="90" cy="90" r="${10+Math.random()*8}" fill="url(#nucl${i})" stroke="#7fd3ea"/>
+        <ellipse cx="90" cy="90" rx="${65+Math.random()*10}" ry="${22+Math.random()*8}" fill="none" stroke="#a7e6ee"/>
+        <ellipse cx="90" cy="90" rx="${22+Math.random()*8}" ry="${65+Math.random()*10}" fill="none" stroke="#a7e6ee"/>
+        <g class="spin" style="animation-duration:${18+Math.random()*10}s">
+          <circle cx="160" cy="90" r="5.5" fill="#11c1a1"/>
+        </g>
+        <g class="spin" style="animation-duration:${15+Math.random()*10}s">
+          <circle cx="90" cy="20" r="5.5" fill="#00b9d1"/>
+        </g>
+      </svg>`;
+    bg.appendChild(el);
+  }
+})();
+
+/* ================= إعدادات أساسية ================= */
+const EXAM_MINUTES = 55;
+let remainingSec = EXAM_MINUTES*60;
+const SHOW_FEEDBACK_DURING_TEST = false; // لا نظهر صح/خطأ أثناء الحل
+
+// صوت نقرة على الاختيار
+let audioCtx;
+function clickBeep(){
+  if(!audioCtx){ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.connect(g); g.connect(audioCtx.destination);
+  o.type='sine'; o.frequency.value=520; g.gain.value=0.06;
+  o.start(); setTimeout(()=>o.stop(),120);
+}
+
+/* ================= بنك الأسئلة ================= */
+/* 50 سؤالاً — نفس محاورك. بإمكانك تغيير النصوص لاحقاً */
+const QUESTIONS = [
+  {"q":"ما الهدف ا\u200fلساسي من اجتماع الزعماء في مونتريال؟","choices":["حماية طبقة الأوزون","توقيع معاهدات تجارية","زيادة إنتاج الطاقة"],"answer":0,"topic":"اتفاقية/بروتوكول مونتريال"},
+  {"q":"عُقد اجتماع مونتريال عام 1987 من أجل","choices":["وضع بروتوكول لحماية الأوزون","تقليل انبعاثات CO2","تطوير الطاقة الشمسية"],"answer":0,"topic":"اتفاقية/بروتوكول مونتريال"},
+  {"q":"اتفاقية مونتريال اهتمت خصوصًا بـ","choices":["حماية طبقة الأوزون من الملوثات","حماية البحار","حماية الغابات"],"answer":0,"topic":"اتفاقية/بروتوكول مونتريال"},
+  {"q":"من نتائج اجتماع مونتريال","choices":["حظر استخدام CFCs تدريجيًا","منع استخدام السيارات","فرض ضرائب على الوقود"],"answer":0,"topic":"اتفاقية/بروتوكول مونتريال"},
+  {"q":"العامل الرئيس في تكوّن ثقب الأوزون فوق القطب الجنوبي","choices":["مركبات الكلوروفلوروكربون","بخار الماء","غاز الأكسجين"],"answer":0,"topic":"طبقة الأوزون وثقب الأوزون"},
+  {"q":"مادة كيميائية تساهم في تدمير الأوزون","choices":["الكلوروفلوروكربون","ثاني أكسيد الكربون","النيتروجين"],"answer":0,"topic":"مركبات CFC وتأثيرها"},
+  {"q":"لماذا يظهر الثقب بوضوح فوق القارة القطبية الجنوبية؟","choices":["الظروف الباردة تُنشّط التفاعلات","قربها من خط الاستواء","لأنها أكثر المناطق حرارة"],"answer":0,"topic":"العوامل الجوية"},
+  {"q":"من العوامل التي تساعد على اتساع الثقب","choices":["شدة الرياح القطبية","نشاط البراكين","زيادة الغازات الدفيئة"],"answer":0,"topic":"العوامل الجوية"},
+  {"q":"يتكوّن معظم الأوزون عند خط الاستواء بسبب","choices":["قوة UV","كثرة الأمطار","وجود غابات مطيرة"],"answer":0,"topic":"طبقة الأوزون وثقب الأوزون"},
+  {"q":"تكوّن الأوزون يعتمد على","choices":["الضوء فوق البنفسجي","الضوء المرئي","الأشعة تحت الحمراء"],"answer":0,"topic":"طبقة الأوزون وثقب الأوزون"},
+  {"q":"أين يكون تركيز الأوزون أعلى عادةً؟","choices":["في الستراتوسفير","على سطح الأرض","عند خط الاستواء"],"answer":0,"topic":"طبقة الأوزون وثقب الأوزون"},
+  {"q":"غاز يتفاعل مع الأوزون مسببًا تفككه","choices":["الكلور","الهيليوم","النيون"],"answer":0,"topic":"مركبات CFC وتأثيرها"},
+  {"q":"أثر ثقب الأوزون على UV الواصلة للسطح","choices":["يزيد من وصولها","لا يؤثر","يقلل وصولها"],"answer":0,"topic":"الأشعة فوق البنفسجية وآثارها"},
+  {"q":"عند إطلاق CFCs يحدث للأوزون","choices":["يتآكل ويتناقص","يزداد سمكًا","يتحول إلى أكسجين"],"answer":0,"topic":"مركبات CFC وتأثيرها"},
+  {"q":"بدائل أكثر أمانًا من CFCs","choices":["HCFCs/HFCs ثم التخلص التدريجي","الهيليوم","الميثان"],"answer":0,"topic":"مركبات CFC وتأثيرها"},
+  {"q":"الأوزون يتكوّن أساسًا في","choices":["الستراتوسفير","التروبوسفير","الميزوسفير"],"answer":0,"topic":"طبقة الأوزون وثقب الأوزون"},
+  {"q":"زيادة UV قد تؤدي إلى","choices":["سرطان الجلد","تحسين النظر","تسريع نمو الشعر"],"answer":0,"topic":"الأشعة فوق البنفسجية وآثارها"},
+  {"q":"مصادر CFCs الشائعة سابقًا","choices":["مكيفات/تبريد/رذاذات","مصابيح LED","أسلاك النحاس"],"answer":0,"topic":"مركبات CFC وتأثيرها"},
+  {"q":"المناطق القطبية أكثر حساسية لتآكل الأوزون بسبب","choices":["الدوامات القطبية والبرودة","الغابات الكثيفة","الحرارة العالية"],"answer":0,"topic":"العوامل الجوية"},
+  {"q":"ينتج الأوزون طبيعيًا من","choices":["تفكك O2 بفعل UV ثم اتحاد O مع O2","تبخر الماء","احتراق الوقود"],"answer":0,"topic":"طبقة الأوزون وثقب الأوزون"},
+  {"q":"التعرّض الزائد لـ UV قد يسبب","choices":["حروق جلدية","زيادة النشاط","تحسن دائم للمزاج"],"answer":0,"topic":"الأشعة فوق البنفسجية وآثارها"},
+  {"q":"وجود ثقب الأوزون يعني","choices":["انخفاضًا كبيرًا في تركيز O3 بمنطقة معينة","ارتفاع O3 عالميًا","عدم وجود O3 نهائيًا"],"answer":0,"topic":"طبقة الأوزون وثقب الأوزون"},
+  {"q":"العلاقة بين CFC والكلور","choices":["CFC يحرر كلورًا نشطًا يفكك O3","CFC يحول الكلور لملح الطعام","لا علاقة"],"answer":0,"topic":"مركبات CFC وتأثيرها"},
+  {"q":"تفعيل تفاعلات التحلل في القطب يرتبط بـ","choices":["غيوم الستراتوسفير القطبية الباردة","الغيوم الركامية","ضباب التروبوسفير"],"answer":0,"topic":"العوامل الجوية"},
+  {"q":"أثر صحي محتمل لزيادة UV","choices":["إعتام عدسة العين","تقوية العظام مباشرة","تحسن السمع"],"answer":0,"topic":"الأشعة فوق البنفسجية وآثارها"},
+  {"q":"يساعد بروتوكول مونتريال على","choices":["خفض إنتاج/استخدام CFCs عالميًا","زيادة زراعة الأشجار فقط","تقليل استهلاك الماء"],"answer":0,"topic":"اتفاقية/بروتوكول مونتريال"},
+  {"q":"دافع رئيس للاتفاقية","choices":["حماية طبقة الأوزون","خفض أسعار النفط","فتح أسواق جديدة"],"answer":0,"topic":"اتفاقية/بروتوكول مونتريال"},
+  {"q":"تأثير ثقب الأوزون على العوالق النباتية","choices":["تضررها من UV الزائد","زيادة إنتاجيتها دومًا","لا تأثير"],"answer":0,"topic":"الأشعة فوق البنفسجية وآثارها"},
+  {"q":"أزيلت CFCs من الرذاذات لأنها","choices":["تتلف الأوزون","باهظة الثمن","سامة باللمس"],"answer":0,"topic":"مركبات CFC وتأثيرها"},
+  {"q":"يوجد معظم الأوزون في","choices":["الستراتوسفير","التروبوسفير","الثرموسفير"],"answer":0,"topic":"طبقة الأوزون وثقب الأوزون"},
+  {"q":"وضوح الثقب فوق القطب الجنوبي بسبب","choices":["الدوامة القطبية والبرودة","التيارات الدافئة","شدة الأمطار"],"answer":0,"topic":"العوامل الجوية"},
+  {"q":"جرعات UV أعلى من الطبيعي تسبب","choices":["حروق وسرطان جلد","تقوية فورية للعضلات","تهدئة عصبية دائمة"],"answer":0,"topic":"الأشعة فوق البنفسجية وآثارها"},
+  {"q":"بدائل CFC لاحقًا","choices":["HCFCs/HFCs ثم التخلص التدريجي","الغازات النبيلة","النيتروجين"],"answer":0,"topic":"مركبات CFC وتأثيرها"},
+  {"q":"الأوزون جزيء مكوّن من","choices":["ثلاث ذرات أكسجين","ذرتي أكسجين","O وN"],"answer":0,"topic":"طبقة الأوزون وثقب الأوزون"},
+  {"q":"زيادة UV على النبات تؤدي إلى","choices":["تلف أنسجة وتقليل نمو","زيادة الإزهار دائمًا","لا تأثير"],"answer":0,"topic":"الأشعة فوق البنفسجية وآثارها"},
+  {"q":"مصطلح «ثقب» لا يعني","choices":["غياب الأوزون تمامًا","انخفاضًا كبيرًا محليًا","منطقة محددة موسميًا"],"answer":0,"topic":"طبقة الأوزون وثقب الأوزون"},
+  {"q":"تحت UV، CFCs","choices":["تتحلل وتطلق كلورًا نشطًا","تتحول إلى ماء","تكوّن أوزون"],"answer":0,"topic":"مركبات CFC وتأثيرها"},
+  {"q":"تزداد UV عند السطح عندما","choices":["يتآكل الأوزون","ترتفع السحب المنخفضة","يزداد CO2 فقط"],"answer":0,"topic":"الأشعة فوق البنفسجية وآثارها"},
+  {"q":"التعرّض المزمن لـ UV على العين قد يسبب","choices":["إعتام عدسة","تحسن الرؤية الليلية","لا شيء"],"answer":0,"topic":"الأشعة فوق البنفسجية وآثارها"},
+  {"q":"وظيفة الأوزون في الستراتوسفير","choices":["امتصاص جزء كبير من UV","توليد الأكسجين للتنفس","تسخين الأرض"],"answer":0,"topic":"طبقة الأوزون وثقب الأوزون"},
+  {"q":"ذرة كلور واحدة يمكنها","choices":["تفكيك عدد كبير من جزيئات O3","تفكيك جزيء واحد فقط","لا تؤثر"],"answer":0,"topic":"مركبات CFC وتأثيرها"},
+  {"q":"الوقاية من UV تشمل","choices":["واقي شمس/نظارات/تقليل التعرض","الجلوس تحت مصباح UV","عدم ارتداء القبعات"],"answer":0,"topic":"الأشعة فوق البنفسجية وآثارها"},
+  {"q":"تأثير بروتوكول مونتريال عالميًا","choices":["انخفاض تدريجي لمستويات المركبات المدمرة للأوزون","ارتفاع فوري لدرجات الحرارة","انعدام السحب القطبية"],"answer":0,"topic":"اتفاقية/بروتوكول مونتريال"},
+  {"q":"ظهور الثقب يكون","choices":["موسميًا ويبلغ الذروة في الربيع القطبي","ثابتًا طوال العام","في الصيف فقط"],"answer":0,"topic":"العوامل الجوية"},
+  {"q":"جرعات UVB الزائدة قد تؤدي إلى","choices":["سرطان الجلد/أضرار DNA","تقوية العظام مباشرة","زيادة الذكاء"],"answer":0,"topic":"الأشعة فوق البنفسجية وآثارها"},
+  {"q":"HCFCs هي","choices":["بدائل انتقالية أقل ضررًا","غازات خاملة تمامًا","نفس CFCs"],"answer":0,"topic":"مركبات CFC وتأثيرها"},
+  {"q":"تحلّل CFCs يحدث غالبًا في","choices":["الستراتوسفير تحت UV","التروبوسفير ليلًا","سطح الأرض"],"answer":0,"topic":"مركبات CFC وتأثيرها"},
+  {"q":"زيادة ثقوب الأوزون تعني","choices":["مناطق أكبر بانخفاض O3","اختفاء الأوزون كليًا","لا اختلاف"],"answer":0,"topic":"طبقة الأوزون وثقب الأوزون"},
+  {"q":"إرشاد مهم في هذا الاختبار","choices":["لا تُعرض الصح/الخطأ حتى النهاية","تُعرض الصح فورًا","يسمح بالسكب"],"answer":0,"topic":"تعليمات الاختبار"},
+  {"q":"زمن الاختبار هو","choices":["55 دقيقة","60 دقيقة","45 دقيقة"],"answer":0,"topic":"تعليمات الاختبار"}
+];
+
+/* ===== روابط مراجعة لكل موضوع + سبب خطأ + وقت بدء مناسب ===== */
+const TOPIC_REVIEW = {
+  "اتفاقية/بروتوكول مونتريال": { reason:"فرق بين حماية الأوزون وخفض CO2.", lesson:"بروتوكول مونتريال وحماية طبقة الأوزون", url:"https://www.youtube.com/results?search_query=%D8%A8%D8%B1%D9%88%D8%AA%D9%88%D9%83%D9%88%D9%84+%D9%85%D9%88%D9%86%D8%AA%D8%B1%D9%8A%D8%A7%D9%84+%D8%A7%D9%84%D8%A3%D9%88%D8%B2%D9%88%D9%86", t:60 },
+  "طبقة الأوزون وثقب الأوزون": { reason:"مكان تكوّن الأوزون مقابل تركيزه.", lesson:"طبقة الأوزون وثقب الأوزون — كيمياء 1", url:"https://www.youtube.com/results?search_query=%D8%B7%D8%A8%D9%82%D8%A9+%D8%A7%D9%84%D8%A3%D9%88%D8%B2%D9%88%D9%86+%D8%AB%D9%82%D8%A8+%D8%A7%D9%84%D8%A3%D9%88%D8%B2%D9%88%D9%86+%D9%83%D9%8A%D9%85%D9%8A%D8%A7%D8%A1+1", t:75 },
+  "مركبات CFC وتأثيرها": { reason:"تحلل CFCs يطلق كلورًا نشطًا.", lesson:"مركبات CFC وتأثيرها على الأوزون", url:"https://www.youtube.com/results?search_query=CFCs+%D9%88%D8%AA%D8%AF%D9%85%D9%8A%D8%B1+%D8%A7%D9%84%D8%A3%D9%88%D8%B2%D9%88%D9%86+%D9%83%D9%8A%D9%85%D9%8A%D8%A7%D8%A1+1", t:90 },
+  "العوامل الجوية": { reason:"دور الغيوم القطبية والدوامة.", lesson:"العوامل الجوية وثقب الأوزون (الدوامة القطبية)", url:"https://www.youtube.com/results?search_query=%D8%A7%D9%84%D8%AF%D9%88%D8%A7%D9%85%D8%A9+%D8%A7%D9%84%D9%82%D8%B7%D8%A8%D9%8A%D8%A9+%D9%88%D8%AB%D9%82%D8%A8+%D8%A7%D9%84%D8%A3%D9%88%D8%B2%D9%88%D9%86", t:50 },
+  "الأشعة فوق البنفسجية وآثارها": { reason:"الربط بين UV والآثار الصحية.", lesson:"الأشعة فوق البنفسجية وآثارها الصحية والبيئية", url:"https://www.youtube.com/results?search_query=%D8%A7%D9%84%D8%A3%D8%B4%D8%B9%D8%A9+%D9%81%D9%88%D9%82+%D8%A7%D9%84%D8%A8%D9%86%D9%81%D8%B3%D8%AC%D9%8A%D8%A9+%D9%83%D9%8A%D9%85%D9%8A%D8%A7%D8%A1+1", t:70 },
+  "تعليمات الاختبار": { reason:"تذكير بقواعد المنهجية.", lesson:"مهارات الاختبار والتعامل مع الأسئلة", url:"https://www.youtube.com/results?search_query=%D9%85%D9%87%D8%A7%D8%B1%D8%A7%D8%AA+%D8%AD%D9%84+%D8%A7%D9%84%D8%A7%D8%AE%D8%AA%D8%A8%D8%A7%D8%B1%D8%A7%D8%AA", t:40 }
+};
+
+/* ===== ألغاز كل 5 أسئلة (1-based): 5,10,...,50 ===== */
+function isRiddleNumber(n1){ return n1%5===0; }
+const RIDDLE_KEYS = {
+  5:  ["O","3",""],     10: ["مو","نت","ريال"], 15: ["C","F","C"],
+  20: ["U","V",""],     25: ["كل","ـ","ور"],     30: ["O2","+O","O3"],
+  35: ["HC","FC","s"],  40: ["ثـ","قـ","ب"],     45: ["سترا","توس","فير"],
+  50: ["كي","مياء","1"]
+};
+let riddleSolved = {}; // questionNumber(1-based) -> true
+
+/* ================= حالة و DOM ================= */
+let current = 0; // index
+let selectedIndex = null;
+let confirmed = new Array(QUESTIONS.length).fill(false);
+let answers = new Array(QUESTIONS.length).fill(null);
+let timerId=null;
+
+const elStart = document.getElementById('start');
+const elQuiz = document.getElementById('quiz');
+const elResult = document.getElementById('result');
+const elQText = document.getElementById('qText');
+const elChoices = document.getElementById('choices');
+const elQNum = document.getElementById('qNum');
+const elBar = document.getElementById('bar');
+const elProg = document.getElementById('progressText');
+const elTimer = document.getElementById('timer');
+const elTopic = document.getElementById('topicTag');
+const btnStart = document.getElementById('startBtn');
+const btnConfirm = document.getElementById('confirmBtn');
+const btnNext = document.getElementById('nextBtn');
+const btnPrev = document.getElementById('prevBtn');
+
+const elRiddle = document.getElementById('riddleBox');
+const r1 = document.getElementById('r1'), r2 = document.getElementById('r2'), r3 = document.getElementById('r3');
+
+const elToast = document.getElementById('toast');
+const elToastMsg = document.getElementById('toastMsg');
+function toast(msg,ms=1600){ elToastMsg.textContent=msg; elToast.classList.remove('hidden'); setTimeout(()=>elToast.classList.add('hidden'),ms); }
+
+/* ================= حظر نسخ/طباعة أثناء الاختبار ================= */
+document.addEventListener('copy', e=>{ if(!elQuiz.classList.contains('hidden')) e.preventDefault(); });
+document.addEventListener('contextmenu', e=>{ if(!elQuiz.classList.contains('hidden')) e.preventDefault(); });
+document.addEventListener('keydown', e=>{
+  if(!elQuiz.classList.contains('hidden')){
+    const k = e.key.toLowerCase();
+    if((e.ctrlKey||e.metaKey) && ['c','x','a','s','p'].includes(k)) e.preventDefault();
+  }
+});
+
+/* ================= بدء ================= */
+btnStart.addEventListener('click', ()=>{
+  const name = document.getElementById('studentName').value.trim();
+  const sec = document.getElementById('section').value.trim();
+  if(!name){ toast('رجاءً اكتب اسم الطالب.'); return; }
+  if(!sec){ toast('اختر الشعبة (1–7).'); return; }
+  elStart.classList.add('hidden');
+  elQuiz.classList.remove('hidden');
+  toast('الاختبار بدأ الآن ✅');
+  startTimer();
+  renderQuestion();
+});
+
+/* ================= مؤقّت ================= */
+function startTimer(){
+  updateTimer();
+  timerId = setInterval(()=>{
+    remainingSec--; updateTimer();
+    if(remainingSec<=0){ clearInterval(timerId); finishQuiz(); }
+  },1000);
+}
+function updateTimer(){
+  const m = String(Math.floor(remainingSec/60)).padStart(2,'0');
+  const s = String(remainingSec%60).padStart(2,'0');
+  elTimer.textContent = ${m}:${s};
+}
+
+/* ================= عرض سؤال ================= */
+function renderQuestion(){
+  const q = QUESTIONS[current];
+  const number = current+1; // 1-based
+
+  elQNum.textContent = number;
+  elProg.textContent = سؤال ${number} من ${QUESTIONS.length};
+  elBar.style.width = ${(current)/QUESTIONS.length*100}%;
+  elTopic.textContent = q.topic || 'موضوع';
+  elQText.textContent = q.q;
+
+  // خلط الاختيارات + تنويع الحروف (أ/ب/ج/د)
+  const labels = ["أ) ","ب) ","ج) ","د) "];
+  const arr = q.choices.map((t,i)=>({t,i}));
+  for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+  elChoices.innerHTML='';
+  selectedIndex = (answers[current]?.chosen ?? null);
+
+  arr.forEach((o,k)=>{
+    const div = document.createElement('div');
+    div.className='choice no-select';
+    div.textContent = labels[k] + o.t;
+    div.tabIndex=0;
+    div.addEventListener('click', ()=>{ clickBeep(); selectChoice(o.i, div); });
+    div.addEventListener('keydown',(e)=>{ if(['Enter',' '].includes(e.key)){ clickBeep(); selectChoice(o.i, div);} });
+    if(answers[current]?.chosen===o.i) div.classList.add('selected');
+    elChoices.appendChild(div);
+  });
+
+  // الأزرار
+  btnPrev.disabled = (current===0);
+  btnNext.disabled = !confirmed[current];
+
+  // الألغاز لهذا السؤال إن كان 5×
+  if(isRiddleNumber(number)){
+    elRiddle.classList.remove('hidden');
+    const keys = RIDDLE_KEYS[number];
+    // إذا كان محلولاً مسبقاً — املأه واجعله جاهز
+    if(riddleSolved[number]){ r1.value=keys[0]; r2.value=keys[1]; r3.value=keys[2]; }
+    else { r1.value=''; r2.value=''; r3.value=''; }
+  }else{
+    elRiddle.classList.add('hidden');
+    r1.value=r2.value=r3.value='';
+  }
+
+  // تفعيل/تعطيل "تأكيد الإجابة"
+  btnConfirm.disabled = !canConfirm();
+}
+
+function selectChoice(realIdx, el){
+  [...elChoices.children].forEach(ch=> ch.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedIndex = realIdx;
+  btnConfirm.disabled = !canConfirm();
+}
+
+function canConfirm(){
+  if(selectedIndex==null) return false;
+  const number = current+1;
+  if(isRiddleNumber(number)){
+    const keys = RIDDLE_KEYS[number];
+    // لازم تحل اللغز: تطابق تام
+    if(riddleSolved[number]) return true;
+    return (r1.value.trim()===keys[0] && r2.value.trim()===keys[1] && r3.value.trim()===keys[2]);
+  }
+  return true;
+}
+
+/* ================= تأكيد (بدون كشف صح/خطأ) ================= */
+btnConfirm.addEventListener('click', ()=>{
+  if(selectedIndex==null) return;
+  // تحقق لغز إن وُجد
+  const number = current+1;
+  if(isRiddleNumber(number) && !riddleSolved[number]){
+    const keys = RIDDLE_KEYS[number];
+    const ok = (r1.value.trim()===keys[0] && r2.value.trim()===keys[1] && r3.value.trim()===keys[2]);
+    if(!ok){ toast('أكمل الألغاز الثلاثة أولاً'); return; }
+    riddleSolved[number]=true;
+  }
+  const q = QUESTIONS[current];
+  const isCorrect = (selectedIndex === q.answer);
+  answers[current] = { chosen:selectedIndex, correctIndex:q.answer, isCorrect, topic:q.topic };
+  confirmed[current] = true;
+  btnNext.disabled = false;
+  toast('تم تسجيل إجابتك'); // بدون أي حكم
+});
+
+/* ================= تنقّل ================= */
+btnNext.addEventListener('click', ()=>{
+  if(current<QUESTIONS.length-1){ current++; renderQuestion(); }
+  else{ finishQuiz(); }
+});
+btnPrev.addEventListener('click', ()=>{
+  if(current>0){ current--; renderQuestion(); }
+});
+
+/* ================= النتيجة ================= */
+function finishQuiz(){
+  clearInterval(timerId);
+  elQuiz.classList.add('hidden');
+  elResult.classList.remove('hidden');
+
+  const total = QUESTIONS.length;
+  const got = answers.filter(a=>a && a.isCorrect).length;
+  document.getElementById('scoreLine').textContent = درجتك: ${got} من ${total};
+
+  const report = document.getElementById('report');
+  report.innerHTML='';
+
+  QUESTIONS.forEach((q,idx)=>{
+    const a = answers[idx] || {chosen:null, correctIndex:q.answer, isCorrect:false, topic:q.topic};
+    const box = document.createElement('div');
+    box.style.cssText='margin:10px 0;padding:12px;border:1px solid #e9eef5;border-radius:10px;background:#fff';
+
+    const num = idx+1;
+    const head = document.createElement('div');
+    head.innerHTML = <strong>س${num}.</strong> ${q.q} <span class="tag">${q.topic||''}</span>;
+    const your = (a.chosen!=null) ? q.choices[a.chosen] : '— لم يجب —';
+    const corr = q.choices[a.correctIndex];
+
+    const p1 = document.createElement('p'); p1.innerHTML = <span class="pill">إجابتك: ${your}</span>;
+    const p2 = document.createElement('p'); p2.innerHTML = a.isCorrect ? ✔ صحيحة : ✘ خاطئة — <strong>هذه هي الإجابة الصحيحة:</strong> ${corr};
+    box.appendChild(head); box.appendChild(p1); box.appendChild(p2);
+
+    if(!a.isCorrect){
+      const info = TOPIC_REVIEW[q.topic];
+      if(info){
+        const p3 = document.createElement('p'); p3.textContent = سبب الخطأ: ${info.reason};
+        const url = info.url + &t=${info.t}s;
+        const p4 = document.createElement('p'); p4.innerHTML = الدرس: <strong>${info.lesson}</strong> — <a href="${url}" target="_blank" rel="noopener">مشاهدة الشرح (من الدقيقة المناسبة)</a>;
+        box.appendChild(p3); box.appendChild(p4);
+      }
+    }
+    report.appendChild(box);
+  });
+}
+</script>
+</body>
+</html>
